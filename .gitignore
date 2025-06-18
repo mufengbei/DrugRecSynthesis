@@ -1,0 +1,9 @@
+output/
+chinese_font_test.png
+font_properties_test.png
+syntheic.py
+synthetic_class.py
+font.py
+font_with_chinese.py
+data/
+check.py
