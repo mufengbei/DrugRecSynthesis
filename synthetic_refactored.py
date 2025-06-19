@@ -4,6 +4,7 @@ import pickle
 from LLMAPI import LLMAPI
 from args import arg
 import pandas as pd
+import sys
 import os
 from tqdm import tqdm
 import random
@@ -159,7 +160,7 @@ class Synthetic:
                 person['antecedents'] = []
                 check_result, error_code = self.llm_api.check_data_error(person)
                 self.llm_cache[check_result['input']] = check_result['output']
-                print(error_code)
+                #print(error_code)
                 if error_code == '0':
                     break
             else:
@@ -189,7 +190,7 @@ class Synthetic:
         while attempts < max_attempts:
             try:
                 diagnosis, symptom = self.get_diagnosis_symptom(person, medicine_symptoms_dict)
-                print(diagnosis, symptom)
+                #print(diagnosis, symptom)
                 
                 medicine_data = medicine_symptoms_dict[diagnosis]
                 
@@ -417,16 +418,57 @@ class Synthetic:
         """读取所有缓存的消息"""
         diagnosis_dict = {}
         
-        with open(f"output/{arg.out_doc}/people_cache.pkl", "rb") as fp:
-            people_list = pickle.load(fp)
-        with open("output/zhipu_llm_cache.pkl", "rb") as f:
-            llm_cache = pickle.load(f)
+        # 修复文件路径，读取正确的数据文件
+        people_file_path = f"output/{arg.history_doc}/people_data.pkl"
+        llm_cache_file_path = f"output/{arg.history_doc}/LLM_cache.pkl"
+        diagnosis_file_path = f"output/{arg.history_doc}/used_diagnosis_dict.json"
         
-        for p in people_list:
-            if p.diagnosis in diagnosis_dict:
-                diagnosis_dict[p.diagnosis] = diagnosis_dict[p.diagnosis] + 1
-            else:
-                diagnosis_dict[p.diagnosis] = 1
+        people_list = []
+        llm_cache = {}
+        
+        # 读取病人数据
+        try:
+            with open(people_file_path, "rb") as fp:
+                people_list = pickle.load(fp)
+            print(f"✓ 成功读取 {len(people_list)} 份现有病人数据")
+        except FileNotFoundError:
+            print(f"⚠ 未找到现有病人数据文件: {people_file_path}")
+            people_list = []
+        except Exception as e:
+            print(f"❌ 读取病人数据时出错: {e}")
+            people_list = []
+        
+        # 读取LLM缓存
+        try:
+            with open(llm_cache_file_path, "rb") as f:
+                llm_cache = pickle.load(f)
+            print(f"✓ 成功读取LLM缓存，包含 {len(llm_cache)} 条记录")
+        except FileNotFoundError:
+            print(f"⚠ 未找到LLM缓存文件: {llm_cache_file_path}")
+            llm_cache = {}
+        except Exception as e:
+            print(f"❌ 读取LLM缓存时出错: {e}")
+            llm_cache = {}
+        
+        # 读取诊断统计
+        try:
+            with open(diagnosis_file_path, 'r', encoding='utf-8') as f:
+                diagnosis_dict = json.load(f)
+            print(f"✓ 成功读取诊断统计，包含 {len(diagnosis_dict)} 种诊断")
+        except FileNotFoundError:
+            print(f"⚠ 未找到诊断统计文件: {diagnosis_file_path}")
+            # 从现有病人数据中重新构建诊断统计
+            for person in people_list:
+                if 'diagnosis' in person:
+                    diagnosis_list = person['diagnosis'] if isinstance(person['diagnosis'], list) else [person['diagnosis']]
+                    for diagnosis in diagnosis_list:
+                        if diagnosis in diagnosis_dict:
+                            diagnosis_dict[diagnosis] += 1
+                        else:
+                            diagnosis_dict[diagnosis] = 1
+        except Exception as e:
+            print(f"❌ 读取诊断统计时出错: {e}")
+            diagnosis_dict = {}
         
         return people_list, llm_cache, diagnosis_dict
     
@@ -464,12 +506,12 @@ class Synthetic:
             if not allergen_pass:
                 medicines_to_remove.update(allergen_failed_medicines)
         # 检查能否正确删除
-        print(person['medicine'])
-        print(medicines_to_remove)
+        #print(person['medicine'])
+        #print(medicines_to_remove)
         # 从药物列表中删除不合格的药物
         person['medicine'] = [med for med in person['medicine'] 
                              if med not in medicines_to_remove]
-        print(person['medicine'])
+        #print(person['medicine'])
 
     def decide_group(self, person):
         """
@@ -637,10 +679,16 @@ class Synthetic:
         # 初始化数据结构
         diagnosis_dict = {}
         people_list = []
+        start_id = 0
         
         # 如果需要在历史数据的基础上生成
         if arg.history_data == 1:
+            print(f"继续生成模式：在现有数据基础上额外生成 {num} 份病人数据...")
             people_list, self.llm_cache, diagnosis_dict = self.read_all_msg()
+            start_id = len(people_list)
+            print(f"✓ 读取到 {len(people_list)} 份现有数据，新数据将从ID {start_id} 开始")
+        else:
+            print(f"重新生成模式：生成 {num} 份全新的病人数据...")
 
         # 创建输出目录
         if not os.path.exists(f"output/{arg.out_doc}"):
@@ -650,13 +698,14 @@ class Synthetic:
         self._load_data_files()
 
         # 生成病人数据
-        print(f"开始生成 {num} 份病人信息\n")
+        mode_text = "继续生成" if arg.history_data == 1 else "生成"
+        print(f"\n开始{mode_text} {num} 份病人信息...")
         now_num = 0
         pbar = tqdm(total=num)
         
         while now_num < num:
             person = {}
-            person['id'] = now_num
+            person['id'] = start_id + now_num
             try:
                 # 1. 生成基础信息：年龄和性别
                 person['age'] = self.get_age(self._age_probabilities)
@@ -704,7 +753,7 @@ class Synthetic:
                 pbar.update(1)
                 
             except Exception as e:
-                print(f"生成第 {now_num + 1} 个病人时出现错误: {e}")
+                print(f"生成第 {start_id + now_num + 1} 个病人时出现错误: {e}")
                 continue
         
         pbar.close()
@@ -738,9 +787,13 @@ class Synthetic:
             print(f"✓ 已保存病人数据到: output/{arg.out_doc}/people_data.json")
         except (TypeError, ValueError) as e:
             print(f"⚠ JSON保存失败，可能包含不可序列化的对象: {e}")
-            print("  建议使用PKL格式读取完整数据")
         
-        print(f"\n✅ 成功生成并保存 {len(people_list)} 份病人数据！")
+        if arg.history_data == 1:
+            print(f"\n✅ 成功在现有 {start_id} 份数据基础上额外生成 {num} 份病人数据！")
+            print(f"现在总共有 {len(people_list)} 份病人数据")
+        else:
+            print(f"\n✅ 成功生成并保存 {len(people_list)} 份病人数据！")
+        
         print(f"数据文件位置:")
         print(f"  - PKL格式: output/{arg.out_doc}/people_data.pkl")
         print(f"  - JSON格式: output/{arg.out_doc}/people_data.json")
@@ -824,6 +877,7 @@ class Synthetic:
         
         return summary
     
+
 def load_people_data(file_format="pkl"):
     """
     从文件中加载病人数据
@@ -837,7 +891,6 @@ def load_people_data(file_format="pkl"):
     return people_data
 
 
-# 为了保持兼容性，提供一个简单的包装函数
 def generate_people_data(num):
     """
     兼容原始接口的包装函数
@@ -851,5 +904,9 @@ def generate_people_data(num):
     synthetic = Synthetic()
     return synthetic.generate_people_data(num)
 
+
+
 if __name__ == '__main__':
-    people_data = generate_people_data(5)
+    generate_people_data(arg.people_num)
+    
+    

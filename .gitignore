@@ -7,3 +7,7 @@ font.py
 font_with_chinese.py
 data/
 check.py
+zhipu_API.py
+example_continue_generation.py
+*.md
+.gitignore

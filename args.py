@@ -4,8 +4,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--liver_prob", type=float, default=0.1)
 # 肾功能不全概率
 parser.add_argument("--kidney_prob", type=float, default=0.1)
-# 是否在历史数据的基础上生成
-parser.add_argument("--history_data", type=int, default=0)
+# 是否在历史数据的基础上生成 (0: 重新生成, 1: 从历史数据继续生成)
+parser.add_argument("--history_data", type=int, default=1)
+# 历史数据文件夹
+parser.add_argument("--history_doc", type=str, default="DrugRec_20250618_5_4")
 # 是否有病史概率
 parser.add_argument("--medhistory_prob", type=float, default=0.2)
 # 是否有过敏原概率
@@ -13,7 +15,7 @@ parser.add_argument("--allergen_prob", type=float, default=0.4)
 # 生成人数量
 parser.add_argument("--people_num", type=int, default=5)
 # 生成数据保存文件夹
-parser.add_argument("--out_doc", type=str, default="DrugRec_20250618_5_4")
+parser.add_argument("--out_doc", type=str, default="DrugRec_20250618_5_5")
 # 与大模型交互缓存数据
 parser.add_argument("--out_LLMcache", type=str, default="output/llm_cache.pkl")
 # 读入人群pickle数据路径
