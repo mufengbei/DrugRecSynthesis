@@ -11,3 +11,14 @@ zhipu_API.py
 example_continue_generation.py
 *.md
 .gitignore
+main.py
+statistics_drugrec.py
+patient_data_analyzer.py
+id_string_converter.py
+data_splitter.py
+data_format_converter.py
+data_checker.py
+bm25_es.py
+bm25_drug_retrieval.py
+extract_patient_data.py
+zhipu_API.py

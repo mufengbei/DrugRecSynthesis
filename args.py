@@ -1,21 +1,21 @@
 import argparse
 parser = argparse.ArgumentParser()
 # 肝功能不全概率
-parser.add_argument("--liver_prob", type=float, default=0.1)
+parser.add_argument("--liver_prob", type=float, default=0.04)
 # 肾功能不全概率
 parser.add_argument("--kidney_prob", type=float, default=0.1)
 # 是否在历史数据的基础上生成 (0: 重新生成, 1: 从历史数据继续生成)
 parser.add_argument("--history_data", type=int, default=1)
 # 历史数据文件夹
-parser.add_argument("--history_doc", type=str, default="DrugRec_20250618_5_4")
+parser.add_argument("--history_doc", type=str, default="DrugRec_0704")
 # 是否有病史概率
-parser.add_argument("--medhistory_prob", type=float, default=0.2)
+parser.add_argument("--medhistory_prob", type=float, default=1)
 # 是否有过敏原概率
-parser.add_argument("--allergen_prob", type=float, default=0.4)
+parser.add_argument("--allergen_prob", type=float, default=0.2)
 # 生成人数量
-parser.add_argument("--people_num", type=int, default=5)
+parser.add_argument("--people_num", type=int, default=2049)
 # 生成数据保存文件夹
-parser.add_argument("--out_doc", type=str, default="DrugRec_20250618_5_5")
+parser.add_argument("--out_doc", type=str, default="DrugRec_0704")
 # 与大模型交互缓存数据
 parser.add_argument("--out_LLMcache", type=str, default="output/llm_cache.pkl")
 # 读入人群pickle数据路径
@@ -28,7 +28,10 @@ parser.add_argument("--diagnosis_filename", type=str, default='data/diagnosis_me
 parser.add_argument("--geography_file_path", type=str, default='data/agedemo2.csv')
 # 病史备选列表文件
 parser.add_argument("--medhistory_file_path", type=str, default='data/medical_history.csv')
-
+# 女性是孕妇的概率
+parser.add_argument("--pregnant_prob", type=float, default=0.2)
+# 女性是哺乳期妇女的概率
+parser.add_argument("--lactation_prob", type=float, default=0.2)
 # 是否生成人的同时，传入大模型生成症状
 parser.add_argument("--to_LLM", type=int, default=0)
 # 是否考虑疾病的覆盖率

@@ -4,33 +4,34 @@ import json
 import csv
 import random
 import dashscope
+import re
 
 class LLMAPI:
     """
-    大语言模型API类，提供病人症状获取和数据错误检查功能
+    Large Language Model API class, provides patient symptom acquisition and data error checking functionality
     """
     
     def __init__(self, api_key, model="qwen-max"):
         """
-        初始化LLMAPI类
+        Initialize LLMAPI class
         
         Args:
-            api_key (str): API密钥
-            model (str): 模型名称，默认为qwen-max
+            api_key (str): API key
+            model (str): Model name, default is qwen-max
         """
         self.api_key = api_key
         self.model = model
         
     def _get_patient_prompt(self, item, spliter=" || "):
         """
-        获取病人症状的prompt模版
+        Get patient symptom prompt template
         
         Args:
-            item (dict): 病人数据项
-            spliter (str): 分隔符
+            item (dict): Patient data item
+            spliter (str): Separator
             
         Returns:
-            tuple: (prompt字符串, 输入信息)
+            tuple: (prompt string, input information)
         """
         def format_input(item, spliter=" || "):
             age = item["age"]
@@ -78,25 +79,25 @@ class LLMAPI:
 
     def _get_error_check_prompt(self, item, spliter=" || "):
         """
-        获取错误检查的prompt模板
+        Get error check prompt template
         
         Args:
-            item (dict): 数据项
-            spliter (str): 分隔符
+            item (dict): Data item
+            spliter (str): Separator
             
         Returns:
-            tuple: (prompt字符串, 输入信息)
+            tuple: (prompt string, input information)
         """
         def format_input_data(item, spliter=" || "):
             """
-            格式化输入数据
+            Format input data
             
             Args:
-                item (dict): 数据项
-                spliter (str): 分隔符
+                item (dict): Data item
+                spliter (str): Separator
             
             Returns:
-                str: 格式化后的输入字符串
+                str: Formatted input string
             """
             age = item["age"]
             group = ",".join(item["group"])
@@ -183,13 +184,13 @@ class LLMAPI:
 
     def _call_llm_api(self, prompt):
         """
-        调用大语言模型API
+        Call LLM API
         
         Args:
-            prompt (str): 输入的prompt
+            prompt (str): Input prompt
             
         Returns:
-            str: 模型返回的结果
+            str: Model returned result
         """
         messages = [{"role": "user", "content": prompt}]
         
@@ -207,26 +208,26 @@ class LLMAPI:
             return output
             
         except Exception as e:
-            print(f"错误信息：{e}")
-            print("请参考文档：https://help.aliyun.com/zh/model-studio/developer-reference/error-code")
+            print(f"Error message: {e}")
+            print("Please refer to documentation: https://help.aliyun.com/zh/model-studio/developer-reference/error-code")
             return f"ERROR: {str(e)}"
 
     def get_patient_symptom(self, item):
         """
-        获取病人症状
+        Get patient symptoms
         
         Args:
-            item (dict): 病人数据项，包含age、gender、group、diagnosis等字段
+            item (dict): Patient data item, contains age, gender, group, diagnosis fields
             
         Returns:
-            str: 提取出的症状信息
+            str: Extracted symptom information
         """
         prompt, input_msg = self._get_patient_prompt(item)
         output = self._call_llm_api(prompt)
         
         print(f"id: {item.get('id', 'N/A')}, output: {output}")
         
-        # 提取症状部分
+        # Extract symptom part
         symptom = self.extract_symptom_from_output(output)
         result = {
             'id': item.get('id', 'N/A'),
@@ -236,38 +237,179 @@ class LLMAPI:
         }
         return result, symptom
 
-    def check_data_error(self, item):
+    def check_data_error(self, item, max_retries=3):
         """
-        检查数据错误
+        Check data errors
         
         Args:
-            item (dict): 数据项，包含age、group、gender、symptom、diagnosis、antecedents等字段
+            item (dict): Data item, contains age, group, gender, symptom, diagnosis, antecedents fields
+            max_retries (int): Maximum retry attempts
             
         Returns:
-            dict: 包含检查结果的字典，格式为{'id': item_id, 'input': input_msg, 'output': output}
+            tuple: (dictionary containing check results, error code string)
         """
         prompt, input_msg = self._get_error_check_prompt(item)
-        output = self._call_llm_api(prompt)
-        error_code = output.split(":")[1].strip().split("\n")[0]
-        print(f"id: {item.get('id', 'N/A')}, output: {output}")
         
+        for attempt in range(max_retries + 1):
+            output = self._call_llm_api(prompt)
+            print(f"id: {item.get('id', 'N/A')}, attempt: {attempt + 1}, output: {output}")
+            
+            # Try to parse error code
+            error_code = self._extract_error_code(output)
+            
+            if error_code is not None:
+                # Successfully parsed, return result
+                result = {
+                    'id': item.get('id', 'N/A'),
+                    'input': input_msg,
+                    'output': output,
+                    'attempts': attempt + 1
+                }
+                return result, error_code
+            else:
+                # Parse failed, record warning
+                print(f"Warning: LLM output format incorrect (attempt {attempt + 1}/{max_retries + 1}): {output}")
+                
+                if attempt < max_retries:
+                    # Not the last attempt, call LLM again
+                    prompt = self._add_format_reminder_to_prompt(prompt)
+                    continue
+        
+        # All attempts failed, return default value
+        print(f"Error: After {max_retries + 1} attempts, still unable to parse LLM output format, defaulting to error code '0'")
         result = {
             'id': item.get('id', 'N/A'),
             'input': input_msg,
-            'output': output
+            'output': output,
+            'attempts': max_retries + 1,
+            'parse_failed': True
         }
+        return result, '0'
+    
+    def _extract_error_code(self, output):
+        """
+        Safely extract error code from LLM output
         
-        return result, error_code
+        Args:
+            output (str): LLM raw output
+            
+        Returns:
+            str or None: Error code string, returns None if parsing fails
+        """
+        import re
+        
+        # Method 1: Find content after "Output:" or "输出："
+        patterns = [
+            r'输出[：:]\s*([0-9,，\s]+)',  # Match "输出: 1,2" or "输出：1,2"
+            r'输出[：:]\s*([0-9]+)',      # Match single digit
+            r'[：:]\s*([0-9,，\s]+)',     # Match any colon followed by digits
+            r'^([0-9,，\s]+)$',           # Match entire line with only digits and commas
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, output.strip())
+            if match:
+                error_code = match.group(1).strip()
+                # Clean and standardize error code
+                error_code = self._clean_error_code(error_code)
+                if self._validate_error_code(error_code):
+                    return error_code
+        
+        # Method 2: Try direct splitting
+        # try:
+        #     if ':' in output:
+        #         parts = output.split(':')
+        #         if len(parts) >= 2:
+        #             error_code = parts[1].strip().split('\n')[0].strip()
+        #             error_code = self._clean_error_code(error_code)
+        #             if self._validate_error_code(error_code):
+        #                 return error_code
+        # except (IndexError, AttributeError):
+        #     pass
+        
+        return None
+    
+    def _clean_error_code(self, error_code):
+        """
+        Clean and standardize error code
+        
+        Args:
+            error_code (str): Raw error code
+            
+        Returns:
+            str: Cleaned error code
+        """
+        
+        # Remove extra spaces and punctuation
+        error_code = re.sub(r'[^\d,，]', '', error_code)
+        # Replace Chinese commas with English commas
+        error_code = error_code.replace('，', ',')
+        # Remove repeated commas
+        error_code = re.sub(r',+', ',', error_code)
+        # Remove leading and trailing commas
+        error_code = error_code.strip(',')
+        
+        return error_code
+    
+    def _validate_error_code(self, error_code):
+        """
+        Validate if error code format is correct
+        
+        Args:
+            error_code (str): Error code
+            
+        Returns:
+            bool: Whether it's a valid error code
+        """
+        
+        # Check if only contains digits and commas
+        if not re.match(r'^[0-9,]*$', error_code):
+            return False
+        
+        # Check if empty
+        if not error_code:
+            return False
+        
+        # Check if each digit is within valid range (0-7)
+        try:
+            numbers = [int(x.strip()) for x in error_code.split(',') if x.strip()]
+            return all(0 <= num <= 7 for num in numbers)
+        except ValueError:
+            return False
+    
+    def _add_format_reminder_to_prompt(self, original_prompt):
+        """
+        Add format reminder to the end of prompt
+        
+        Args:
+            original_prompt (str): Original prompt
+            
+        Returns:
+            str: Prompt with format reminder added
+        """
+        reminder = """
+        
+Important reminder: Please output strictly according to the following format, do not add any other text:
+Output: [Error Number]
+
+For example:
+Output: 0
+Output: 1
+Output: 1,5
+
+Please check the following medical record now:
+"""
+        return original_prompt + reminder
 
     def batch_check_errors(self, datas):
         """
-        批量检查数据错误
+        Batch check data errors
         
         Args:
-            datas (list): 数据列表
+            datas (list): Data list
         
         Returns:
-            list: 检查结果列表
+            list: Check result list
         """
         checked = []
         
@@ -280,24 +422,24 @@ class LLMAPI:
     @staticmethod
     def extract_symptom_from_output(data_string, spliter=" || "):
         """
-        从格式化的数据字符串中提取症状部分
+        Extract symptom part from formatted data string
         
         Args:
-            data_string (str): 格式化的数据字符串，如 "29岁 || 女 || 成人 || 尿频、尿急、尿痛 || 尿路感染"
-            spliter (str): 分隔符，默认为 " || "
+            data_string (str): Formatted data string, e.g., "29岁 || 女 || 成人 || 尿频、尿急、尿痛 || 尿路感染"
+            spliter (str): Separator, default is " || "
         
         Returns:
-            str: 症状部分的内容，如果格式不正确则返回None
+            str: Symptom part content, returns None if format is incorrect
         """
         try:
             parts = data_string.split(spliter)
             if len(parts) >= 4:
-                return parts[3]  # 第4个元素（索引为3）就是症状部分
+                return parts[3]  # The 4th element (index 3) is the symptom part
             else:
-                print(f"数据格式不正确，期望至少4个部分，实际得到{len(parts)}个部分")
+                print(f"Data format incorrect, expected at least 4 parts, actually got {len(parts)} parts")
                 return None
         except Exception as e:
-            print(f"提取症状部分时出错: {e}")
+            print(f"Error extracting symptom part: {e}")
             return None
     
 
@@ -305,14 +447,14 @@ class LLMAPI:
 
 def load_data(data_path, file_names):
     """
-    加载数据文件
+    Load data files
     
     Args:
-        data_path (str): 数据文件所在路径
-        file_names (list): 数据文件名列表
+        data_path (str): Data file path
+        file_names (list): Data file name list
     
     Returns:
-        list: 合并后的数据列表
+        list: Combined data list
     """
     datas = []
     for file in file_names:
@@ -324,11 +466,11 @@ def load_data(data_path, file_names):
 
 def save_results(results, output_path):
     """
-    保存检查结果到JSON文件
+    Save check results to JSON file
     
     Args:
-        results (list): 检查结果列表
-        output_path (str): 输出文件路径
+        results (list): Check result list
+        output_path (str): Output file path
     """
     with open(output_path, "w", encoding='utf-8') as fp:
         fp.write(json.dumps(results, ensure_ascii=False, indent=4))
@@ -340,70 +482,42 @@ def main(data_path="gnn-data/improvement_66_listtodict",
          api_key="sk-d1255a437700465a8709fd302d31834b",
          model="qwen-max"):
     """
-    主函数
+    Main function
     
     Args:
-        data_path (str): 数据文件路径
-        files (list): 数据文件名列表
-        output_file (str): 输出文件名
-        api_key (str): API密钥
-        model (str): 模型名称
+        data_path (str): Data file path
+        files (list): Data file name list
+        output_file (str): Output file name
+        api_key (str): API key
+        model (str): Model name
     """
-    # 初始化LLMAPI
+    # Initialize LLMAPI
     llm_api = LLMAPI(api_key, model)
     
-    # 加载数据
+    # Load data
     datas = load_data(data_path, files)
     
-    # 批量检查错误
+    # Batch check errors
     checked_results = llm_api.batch_check_errors(datas)
     
-    # 保存结果
+    # Save results
     output_path = os.path.join(data_path, output_file)
     save_results(checked_results, output_path)
     
-    print(f"检查完成，结果已保存到: {output_path}")
+    print(f"Check completed, results saved to: {output_path}")
 
 
-# 保留原有的函数作为向后兼容
-def get_patient_prompt(item, spliter=" || "):
-    """向后兼容的函数"""
-    llm_api = LLMAPI("")  # 创建临时实例
-    return llm_api._get_patient_prompt(item, spliter)
 
-def get_error_check_prompt(item, spliter=" || "):
-    """向后兼容的函数"""
-    llm_api = LLMAPI("")  # 创建临时实例
-    return llm_api._get_error_check_prompt(item, spliter)
-
-def check_error_single_item(item, api_key, model="qwen-max"):
-    """向后兼容的函数"""
-    llm_api = LLMAPI(api_key, model)
-    return llm_api.check_data_error(item)
-
-def batch_check_errors(datas, api_key, model="qwen-max"):
-    """向后兼容的函数"""
-    llm_api = LLMAPI(api_key, model)
-    return llm_api.batch_check_errors(datas)
-
-def get_symptom_single_item(item, api_key, model="qwen-max"):
-    """向后兼容的函数"""
-    llm_api = LLMAPI(api_key, model)
-    return llm_api.get_patient_symptom(item)
-
-def extract_xx_part(data_string, spliter=" || "):
-    """向后兼容的函数"""
-    return LLMAPI.extract_symptom_from_output(data_string, spliter)
 
 
 if __name__ == "__main__":
-    # 配置参数
+    # Configuration parameters
     path = "gnn-data/improvement_66_listtodict"
     files = ["dev.pkl"]
     output_file_json = "check_out_result_dev.json"
     api_key = "sk-d1255a437700465a8709fd302d31834b"
     
-    # 运行主函数
+    # Run main function
     main(
         data_path=path,
         files=files,

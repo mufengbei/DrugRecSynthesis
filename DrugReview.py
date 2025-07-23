@@ -13,7 +13,7 @@ class DrugReviewSystem:
     def query_database(self, query, parameters=None):
         return self.graph.run(query, parameters=parameters).data()
 
-    # 药物相互作用审查
+    # Drug interaction review
     def drug_interactions(self, user_drugs):
         interactions = []
         drug_data = {}
@@ -47,7 +47,7 @@ class DrugReviewSystem:
         else:
             return True, "无药物相互作用"
 
-    # 过敏原审查
+    # Allergen review
     def allergy_review(self, user_drugs, user_allergens):
         allergens_found = []
         drug_data = {}
@@ -73,7 +73,7 @@ class DrugReviewSystem:
         else:
             return True, "无过敏原"
 
-    # 不良反应审查
+    # Adverse reaction review
     def adverse_reaction_review(self, user_drugs, disease):
         adverse_reaction = []
         drug_data = {}
@@ -97,7 +97,7 @@ class DrugReviewSystem:
         else:
             return True, "无不良反应"
 
-    # 重复用药审查
+    # Duplicate medication review
     def duplicate_drug_review(self, user_drugs):
         interactions = []
         drug_data = {}
@@ -121,7 +121,7 @@ class DrugReviewSystem:
         else:
             return True, "无重复用药"
 
-    # 禁忌症审查
+    # Contraindication review
     def contraindication_review(self, user_drugs, disease):
         contraindication = []
         drug_data = {}
@@ -145,7 +145,7 @@ class DrugReviewSystem:
         else:
             return True, "禁忌症审查通过"
 
-    # 年龄审查
+    # Age review
     def age_review(self, user_drugs, age):
         age_found = []
         for drug in user_drugs:
@@ -173,13 +173,13 @@ class DrugReviewSystem:
         else:
             return True, ["年龄审查通过"]
 
-    # 特殊人群审查
+    # Special population review
     def special_population_review(self, user_drugs, population):
         special_population = []
         drug_data = {}
 
-        # 为每个用户提供的人群词创建一个模糊匹配的模式
-        population_patterns = [f"(?i).*{pop}.*" for pop in population]  # 使用正则表达式，(?i)表示不区分大小写
+        # Create fuzzy matching patterns for each user-provided population term
+        population_patterns = [f"(?i).*{pop}.*" for pop in population]  # Use regex, (?i) means case insensitive
 
         for drug in user_drugs:
             query = f"""
@@ -190,11 +190,11 @@ class DrugReviewSystem:
                     """
             results = self.query_database(query, {'drug': drug})
             if results:
-                # 将数据库中的人群名称与提供的人群模式进行比较
+                # Compare database population names with provided population patterns
                 drug_populations = set(results[0]['populations'])
                 for pattern in population_patterns:
                     for pop in drug_populations:
-                        if re.search(pattern, pop, re.IGNORECASE):  # 进行模糊匹配
+                        if re.search(pattern, pop, re.IGNORECASE):  # Perform fuzzy matching
                             special_population.append(drug)
                             #special_population.append((drug, pop))
 
@@ -204,7 +204,7 @@ class DrugReviewSystem:
         else:
             return True, ["特殊人群审查通过"]
     
-    # 给药途径审查
+    # Administration route review
     def method_review(self, user_drugs_methods):
         method_found = []
         drug_data = {}
