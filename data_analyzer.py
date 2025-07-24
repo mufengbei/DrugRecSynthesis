@@ -7,6 +7,15 @@ from pylab import mpl
 import matplotlib.font_manager as fm
 import matplotlib
 
+try:
+    if hasattr(matplotlib.font_manager, '_rebuild'):
+        matplotlib.font_manager._rebuild()
+    else:
+        matplotlib.font_manager.fontManager.__init__()
+    print("Font cache rebuilt")
+except Exception as e:
+    print(f"Font cache rebuild failed, continuing: {e}")
+
 # Find Chinese fonts
 print("=== Finding Chinese fonts in the system ===")
 chinese_fonts = []

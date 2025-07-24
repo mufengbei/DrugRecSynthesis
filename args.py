@@ -5,21 +5,17 @@ parser.add_argument("--liver_prob", type=float, default=0.04)
 # Probability of kidney dysfunction
 parser.add_argument("--kidney_prob", type=float, default=0.1)
 # Whether to generate based on historical data (0: regenerate, 1: continue from historical data)
-parser.add_argument("--history_data", type=int, default=1)
+parser.add_argument("--history_data", type=int, default=0)
 # Historical data folder
-parser.add_argument("--history_doc", type=str, default="DrugRec_0704")
+parser.add_argument("--history_doc", type=str, default="DrugRec_0724")
 # Probability of having medical history
 parser.add_argument("--medhistory_prob", type=float, default=1)
 # Probability of having allergens
 parser.add_argument("--allergen_prob", type=float, default=0.2)
 # Number of people to generate
-parser.add_argument("--people_num", type=int, default=2049)
+parser.add_argument("--people_num", type=int, default=5)
 # Generated data save folder
-parser.add_argument("--out_doc", type=str, default="DrugRec_0704")
-# Cache data for LLM interaction
-parser.add_argument("--out_LLMcache", type=str, default="output/llm_cache.pkl")
-# Path to read population pickle data
-parser.add_argument("--read_person", type=str, default='output/patientdata6/people_cache.pkl')
+parser.add_argument("--out_doc", type=str, default="DrugRec_0724")
 # Source CSV file for allergen list extraction
 parser.add_argument("--allergen_filename", type=str, default='data/allergen.csv')
 # Source CSV file for symptom list extraction
