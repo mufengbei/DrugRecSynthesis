@@ -9,7 +9,6 @@ data/
 check.py
 zhipu_API.py
 example_continue_generation.py
-*.md
 .gitignore
 main.py
 statistics_drugrec.py

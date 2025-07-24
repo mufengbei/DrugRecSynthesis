@@ -1,42 +1,40 @@
 import argparse
 parser = argparse.ArgumentParser()
-# 肝功能不全概率
+# Probability of liver dysfunction
 parser.add_argument("--liver_prob", type=float, default=0.04)
-# 肾功能不全概率
+# Probability of kidney dysfunction
 parser.add_argument("--kidney_prob", type=float, default=0.1)
-# 是否在历史数据的基础上生成 (0: 重新生成, 1: 从历史数据继续生成)
+# Whether to generate based on historical data (0: regenerate, 1: continue from historical data)
 parser.add_argument("--history_data", type=int, default=1)
-# 历史数据文件夹
+# Historical data folder
 parser.add_argument("--history_doc", type=str, default="DrugRec_0704")
-# 是否有病史概率
+# Probability of having medical history
 parser.add_argument("--medhistory_prob", type=float, default=1)
-# 是否有过敏原概率
+# Probability of having allergens
 parser.add_argument("--allergen_prob", type=float, default=0.2)
-# 生成人数量
+# Number of people to generate
 parser.add_argument("--people_num", type=int, default=2049)
-# 生成数据保存文件夹
+# Generated data save folder
 parser.add_argument("--out_doc", type=str, default="DrugRec_0704")
-# 与大模型交互缓存数据
+# Cache data for LLM interaction
 parser.add_argument("--out_LLMcache", type=str, default="output/llm_cache.pkl")
-# 读入人群pickle数据路径
+# Path to read population pickle data
 parser.add_argument("--read_person", type=str, default='output/patientdata6/people_cache.pkl')
-# 过敏原列表提取源csv文件
+# Source CSV file for allergen list extraction
 parser.add_argument("--allergen_filename", type=str, default='data/allergen.csv')
-# 症状列表提取源csv文件
+# Source CSV file for symptom list extraction
 parser.add_argument("--diagnosis_filename", type=str, default='data/diagnosis_medicine_dict.json')
-# 人群年龄概率文件
+# Population age probability file
 parser.add_argument("--geography_file_path", type=str, default='data/agedemo2.csv')
-# 病史备选列表文件
+# Medical history candidate list file
 parser.add_argument("--medhistory_file_path", type=str, default='data/medical_history.csv')
-# 女性是孕妇的概率
+# Probability of females being pregnant
 parser.add_argument("--pregnant_prob", type=float, default=0.2)
-# 女性是哺乳期妇女的概率
+# Probability of females being lactating
 parser.add_argument("--lactation_prob", type=float, default=0.2)
-# 是否生成人的同时，传入大模型生成症状
-parser.add_argument("--to_LLM", type=int, default=0)
-# 是否考虑疾病的覆盖率
+# Whether to consider disease coverage
 parser.add_argument("--consider_coverage", type=int, default=1)
-# 允许同名疾病出现多少次,只在考虑疾病覆盖率时起效
+# Maximum number of times the same disease can appear, only effective when considering disease coverage
 parser.add_argument("--upper_limit", type=int, default=2)
 
 arg = parser.parse_args()
