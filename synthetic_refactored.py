@@ -16,7 +16,7 @@ class Synthetic:
     """Synthetic data generation class"""
     
     def __init__(self, neo4j_uri="http://localhost:7474", 
-                 api_key="sk-d1255a437700465a8709fd302d31834b", 
+                 api_key="", 
                  model="qwen-max"):
         """
         Initialize synthetic data generator
