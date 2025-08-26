@@ -61,10 +61,10 @@ consider_coverage = 1      # Enable diagnosis coverage monitoring
 # Probability settings
 allergen_prob = 0.2        # Probability of drug allergies
 medhistory_prob = 0.3      # Probability of medical history
-liver_prob = 0.04          # Probability of liver dysfunction
+liver_prob = 0.03          # Probability of liver dysfunction
 kidney_prob = 0.10         # Probability of kidney dysfunction
-pregnant_prob = 0.20       # Probability of pregnancy (fertile females)
-lactation_prob = 0.20      # Probability of lactation (fertile females)
+pregnant_prob = 0.035       # Probability of pregnancy (fertile females)
+lactation_prob = 0.057      # Probability of lactation (fertile females)
 
 # File paths
 out_doc = "DrugRec"  # Output directory
