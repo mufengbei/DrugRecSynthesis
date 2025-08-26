@@ -54,20 +54,20 @@ Configure the system parameters in `args.py`:
 
 ```python
 # Generation parameters
-people_num = 1000          # Number of patients to generate
-upper_limit = 50           # Maximum patients per diagnosis
+people_num = 21000          # Number of patients to generate
+upper_limit = 2           # Maximum patients per diagnosis
 consider_coverage = 1      # Enable diagnosis coverage monitoring
 
 # Probability settings
-allergen_prob = 0.1        # Probability of drug allergies
+allergen_prob = 0.2        # Probability of drug allergies
 medhistory_prob = 0.3      # Probability of medical history
-liver_prob = 0.05          # Probability of liver dysfunction
-kidney_prob = 0.05         # Probability of kidney dysfunction
-pregnant_prob = 0.08       # Probability of pregnancy (fertile females)
-lactation_prob = 0.05      # Probability of lactation (fertile females)
+liver_prob = 0.04          # Probability of liver dysfunction
+kidney_prob = 0.10         # Probability of kidney dysfunction
+pregnant_prob = 0.20       # Probability of pregnancy (fertile females)
+lactation_prob = 0.20      # Probability of lactation (fertile females)
 
 # File paths
-out_doc = "synthetic_data"  # Output directory
+out_doc = "DrugRec"  # Output directory
 history_doc = "previous"    # Historical data directory (for continuation)
 ```
 
@@ -86,7 +86,7 @@ generator = Synthetic(
 )
 
 # Generate 1000 synthetic patients
-patients = generator.generate_people_data(1000)
+patients = generator.generate_people_data(21000)
 ```
 
 ### Continuation Mode
